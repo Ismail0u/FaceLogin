@@ -1,5 +1,5 @@
 # services/db_service.py
-
+import ast  # pour parser la chaîne de dictionnaire
 import os
 import csv
 from datetime import datetime
@@ -28,10 +28,24 @@ def log_presence(name):
 
 # Récupère toutes les présences (en option : filtrer par nom ou date)
 def get_all_presences():
-    presences = []
-    if os.path.exists(CSV_PATH):
-        with open(CSV_PATH, mode='r') as file:
-            reader = csv.DictReader(file)
-            for row in reader:
-                presences.append(row)
-    return presences
+    if not os.path.exists(CSV_PATH):
+        return []
+
+    cleaned_data = []
+    with open(CSV_PATH, "r") as f:
+        reader = csv.reader(f)
+        for row in reader:
+            try:
+                identity_dict = ast.literal_eval(row[0])
+                name = identity_dict.get("identity", "Inconnu")
+                date = row[1]
+                time = row[2]
+                cleaned_data.append({
+                    "Nom": name,
+                    "Date": date,
+                    "Heure": time,
+                    "DateTime": datetime.strptime(f"{date} {time}", "%Y-%m-%d %H:%M:%S")
+                })
+            except Exception as e:
+                print("Erreur:", e)
+    return cleaned_data
