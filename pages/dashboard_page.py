@@ -17,7 +17,7 @@ def show_dashboard():
     if data:
         df = pd.DataFrame(data)
 
-        # 📌 Filtrage dynamique 
+        # 📌 Filtrage dynamique
         noms = df["Nom"].unique().tolist()
         selected_nom = st.selectbox("🔍 Filtrer par nom :", options=["Tous"] + noms)
 

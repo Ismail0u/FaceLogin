@@ -11,7 +11,7 @@ st.set_page_config(page_title="FaceLogin", layout="centered")
 with st.sidebar:
     selected = option_menu(
         menu_title="FaceLogin",
-        options=["📸 Reconnaissance", "➕ Ajouter un utilisateur", "📊 Dashboard"],
+        options=["Reconnaissance", "Ajouter un utilisateur", "Dashboard"],
         icons=["camera", "person-plus"],
         default_index=0,
     )
@@ -19,17 +19,17 @@ with st.sidebar:
 # -------------------------------
 # PAGE 1 : Reconnaissance Faciale
 # -------------------------------
-if selected == "📸 Reconnaissance":
+if selected == "Reconnaissance":
     show_recognition()
 
 # -------------------------------
 # PAGE 2 : Ajout d’un Utilisateur
 # -------------------------------
-elif selected == "➕ Ajouter un utilisateur":
+elif selected == "Ajouter un utilisateur":
     add_user()
 
 # -------------------------------
 # PAGE 3 : Dashboard Admin
 # -------------------------------
-elif selected == "📊 Dashboard":
+elif selected == "Dashboard":
     show_dashboard()
