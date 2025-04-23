@@ -31,3 +31,22 @@ def generate_presence_report():
     report_html += f"<p>📆 Jours avec présence : {total_days}</p>"
 
     return report_html
+
+from io import BytesIO
+from fpdf import FPDF
+
+def generate_pdf_report(df):
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font("Arial", size=12)
+
+    pdf.cell(200, 10, txt="Rapport de Présence - FaceLogin", ln=True, align="C")
+    pdf.ln(10)
+
+    for index, row in df.iterrows():
+        line = f"{row['Date']} - {row['Heure']} : {row['Nom']}"
+        pdf.cell(200, 10, txt=line, ln=True)
+
+    buffer = BytesIO()
+    pdf.output(buffer)
+    return buffer.getvalue()
