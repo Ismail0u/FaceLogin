@@ -35,18 +35,22 @@ def generate_presence_report():
 from io import BytesIO
 from fpdf import FPDF
 
-def generate_pdf_report(df):
+from fpdf import FPDF
+from io import BytesIO
+import datetime
+
+def generate_pdf_report(filtered_df):
     pdf = FPDF()
     pdf.add_page()
     pdf.set_font("Arial", size=12)
 
-    pdf.cell(200, 10, txt="Rapport de Présence - FaceLogin", ln=True, align="C")
+    pdf.cell(200, 10, txt="Rapport des présences", ln=True, align="C")
     pdf.ln(10)
 
-    for index, row in df.iterrows():
-        line = f"{row['Date']} - {row['Heure']} : {row['Nom']}"
+    for _, row in filtered_df.iterrows():
+        line = f"{row['Nom']} - {row['Date']} à {row['Heure']}"
         pdf.cell(200, 10, txt=line, ln=True)
 
-    buffer = BytesIO()
-    pdf.output(buffer)
-    return buffer.getvalue()
+    # ✅ Générer en mémoire
+    pdf_output = pdf.output(dest="S").encode("latin1")  # encode le PDF en bytes
+    return BytesIO(pdf_output)  # renvoie un objet BytesIO compatible Streamlit

@@ -5,7 +5,6 @@ from services.report_service import generate_presence_report, generate_pdf_repor
 import pandas as pd
 import plotly.express as px
 import streamlit as st
-from datetime import datetime
 
 def show_dashboard():
     st.title("📊 Dashboard des présences")
@@ -18,16 +17,17 @@ def show_dashboard():
 
     df = pd.DataFrame(data)
 
+    # 🔍 Filtres dynamiques
     with st.expander("🔍 Filtres avancés"):
-        cols = st.columns(3)
+        col1, col2, col3 = st.columns(3)
 
-        noms = ["Tous"] + sorted(df["Nom"].unique().tolist())
-        selected_nom = cols[0].selectbox("👤 Nom", noms)
+        noms = ["Tous"] + sorted(df["Nom"].unique())
+        selected_nom = col1.selectbox("👤 Nom", noms)
 
-        dates = ["Toutes"] + sorted(df["Date"].unique().tolist(), reverse=True)
-        selected_date = cols[1].selectbox("📅 Date", dates)
+        dates = ["Toutes"] + sorted(df["Date"].unique(), reverse=True)
+        selected_date = col2.selectbox("📅 Date", dates)
 
-        search = cols[2].text_input("🔎 Recherche (partielle)", "")
+        search_query = col3.text_input("🔎 Recherche partielle")
 
     # ✅ Application des filtres
     filtered_df = df.copy()
@@ -35,71 +35,71 @@ def show_dashboard():
         filtered_df = filtered_df[filtered_df["Nom"] == selected_nom]
     if selected_date != "Toutes":
         filtered_df = filtered_df[filtered_df["Date"] == selected_date]
-    if search:
-        filtered_df = filtered_df[filtered_df["Nom"].str.contains(search, case=False)]
+    if search_query:
+        filtered_df = filtered_df[filtered_df["Nom"].str.contains(search_query, case=False)]
 
     # 📊 Statistiques
-    col1, col2 = st.columns(2)
-    col1.metric("👥 Présences affichées", len(filtered_df))
-    col2.metric("👤 Utilisateurs uniques", df["Nom"].nunique())
+    st.markdown("### 📈 Statistiques")
+    stat1, stat2 = st.columns(2)
+    stat1.metric("👥 Présences affichées", len(filtered_df))
+    stat2.metric("👤 Utilisateurs uniques", df["Nom"].nunique())
 
     # 🗂️ Onglets de contenu
-    tabs = st.tabs(["📋 Tableau", "📈 Graphique", "🧾 Export & Rapport"])
+    tab1, tab2, tab3 = st.tabs(["📋 Tableau", "📈 Graphique", "🧾 Export & Rapport"])
 
-    # 📋 Tab 1 : Tableau
-    with tabs[0]:
+    with tab1:
+        st.markdown("### 📋 Tableau des présences")
         st.dataframe(
             filtered_df.sort_values(by=["Date", "Heure"], ascending=False),
             use_container_width=True
         )
 
-    # 📈 Tab 2 : Graphique
-    with tabs[1]:
+    with tab2:
+        st.markdown("### 📈 Fréquentation par jour")
         graph_df = (
             filtered_df.groupby("Date")
             .size()
             .reset_index(name="Présences")
-            .sort_values(by="Date")
+            .sort_values("Date")
         )
-
         if not graph_df.empty:
-            fig = px.bar(
-                graph_df, x="Date", y="Présences", text_auto=True,
-                labels={"Date": "Date", "Présences": "Nombre de présences"},
-                title="📅 Fréquentation par jour"
+            fig = px.line(
+                graph_df, x="Date", y="Présences",
+                markers=True,
+                title="Courbe des présences par jour",
+                labels={"Date": "Date", "Présences": "Nombre de présences"}
             )
             st.plotly_chart(fig, use_container_width=True)
         else:
-            st.warning("Aucune donnée disponible pour le graphique.")
+            st.warning("Aucune donnée à afficher pour le graphique.")
 
-    # 🧾 Tab 3 : Export / Rapport
-    with tabs[2]:
-        st.subheader("⬇️ Export")
-        col_csv, col_pdf = st.columns(2)
+    with tab3:
+        st.markdown("### 📄 Export et rapport")
+        export_col1, export_col2 = st.columns(2)
 
-        # Export CSV
+        # ⬇️ Export CSV
         csv_data = filtered_df.to_csv(index=False).encode("utf-8")
-        col_csv.download_button(
-            "📄 Télécharger CSV",
+        export_col1.download_button(
+            label="📥 Télécharger CSV",
             data=csv_data,
-            file_name="presences.csv",
+            file_name="presences_filtrées.csv",
             mime="text/csv"
         )
 
-        # Génération PDF
-        if col_pdf.button("🧾 Générer le rapport PDF"):
+        # 🧾 Génération du PDF
+        if export_col2.button("🧾 Générer le rapport PDF"):
             pdf_bytes = generate_pdf_report(filtered_df)
             st.download_button(
-                label="📥 Télécharger PDF",
+                label="📄 Télécharger PDF",
                 data=pdf_bytes,
-                file_name=f"rapport_presences_{datetime.today().date()}.pdf",
+                file_name="rapport_presences.pdf",
                 mime="application/pdf"
             )
 
-        # Email
+        # 📤 Email
         st.markdown("---")
-        if st.toggle("📤 Envoyer par email", value=False):
-            with st.spinner("📬 Envoi du rapport..."):
-                html = generate_presence_report()
-                send_email("tonadresse@gmail.com", "📊 Rapport quotidien - FaceLogin", html)
-                st.success("✅ Rapport envoyé avec succès !")
+        if st.toggle("📬 Envoyer le rapport du jour par email"):
+            with st.spinner("Envoi en cours..."):
+                html_report = generate_presence_report()
+                send_email("tonadresse@gmail.com", "📊 Rapport quotidien - FaceLogin", html_report)
+                st.success("✅ Rapport envoyé avec succès.")
