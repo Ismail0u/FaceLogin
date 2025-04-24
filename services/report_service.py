@@ -9,7 +9,7 @@ def generate_presence_report():
     df = pd.DataFrame(data, columns=["Nom", "Date", "Heure"])
     df["Date"] = pd.to_datetime(df["Date"])
 
-    today = pd.Timestamp(datetime.now().date())
+    today = pd.Timestamp(datetime.datetime.now().date())
     weekday = today.strftime("%A")
 
     report_html = f"<h2>📅 Rapport du {today.strftime('%d/%m/%Y')} ({weekday})</h2>"

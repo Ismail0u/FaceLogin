@@ -1,35 +1,96 @@
-# app.py
 import streamlit as st
-from pages.dashboard_page import show_dashboard
-from pages.add_user_page import add_user
+from datetime import datetime
 from streamlit_option_menu import option_menu
+import streamlit_lottie as st_lottie
+import requests
+
+from auth import login, logout
+from pages.dashboard_page import show_dashboard
 from pages.recognition_page import show_recognition
-
-st.set_page_config(page_title="FaceLogin", layout="centered")
-
-# Navigation via barre latérale
-with st.sidebar:
-    selected = option_menu(
-        menu_title="FaceLogin",
-        options=["Reconnaissance", "Ajouter un utilisateur", "Dashboard"],
-        icons=["camera", "person-plus"],
-        default_index=0,
-    )
+from pages.add_user_page import add_user
+from pages.admin_page import show_admin_page
 
 # -------------------------------
-# PAGE 1 : Reconnaissance Faciale
+# Initialisation session
 # -------------------------------
-if selected == "Reconnaissance":
-    show_recognition()
+if "authenticated" not in st.session_state:
+    st.session_state.authenticated = False
+    st.session_state.email = None
+    st.session_state.role = None
 
 # -------------------------------
-# PAGE 2 : Ajout d’un Utilisateur
+# Authentification
 # -------------------------------
-elif selected == "Ajouter un utilisateur":
-    add_user()
+if not st.session_state.authenticated:
+    login()
+else:
+    st.set_page_config(page_title="FaceLogin", layout="centered")
 
-# -------------------------------
-# PAGE 3 : Dashboard Admin
-# -------------------------------
-elif selected == "Dashboard":
-    show_dashboard()
+    def load_lottie_url(url: str):
+        try:
+            r = requests.get(url)
+            if r.status_code == 200:
+                return r.json()
+            else:
+                st.warning("⚠️ Animation non disponible (erreur de chargement).")
+                return None
+        except Exception as e:
+            st.error(f"❌ Erreur Lottie : {e}")
+            return None
+
+    # -------------------------------
+    # Barre latérale de navigation
+    # -------------------------------
+    with st.sidebar:
+        st.markdown(f"👋 Connecté en tant que : **{st.session_state.email}**")
+        logout()
+        selected = option_menu(
+            menu_title="FaceLogin",
+            options=["🏠 Accueil", "Reconnaissance", "Ajouter un utilisateur", "Dashboard", "Admin"],
+            icons=["house", "camera", "person-plus", "bar-chart-line", "gear"],
+            default_index=0,
+        )
+
+    # -------------------------------
+    # PAGE 1 : Accueil
+    # -------------------------------
+    if selected == "🏠 Accueil":
+        st.title("🎉 Bienvenue sur FaceLogin")
+        st.markdown("Système de reconnaissance faciale pour le suivi de présence 📸👤")
+        st.markdown(f"🕒 Date et heure actuelles : **{datetime.now().strftime('%d/%m/%Y %H:%M:%S')}**")
+
+        lottie = load_lottie_url("https://assets3.lottiefiles.com/packages/lf20_jcikwtux.json")
+        if lottie:
+            st_lottie.st_lottie(lottie, height=300, key="face")
+        else:
+            st.info("Aucune animation disponible pour l'instant.")
+
+    # -------------------------------
+    # PAGE 2 : Reconnaissance
+    # -------------------------------
+    elif selected == "Reconnaissance":
+        show_recognition()
+
+    # -------------------------------
+    # PAGE 3 : Ajouter un utilisateur
+    # -------------------------------
+    elif selected == "Ajouter un utilisateur":
+        add_user()
+
+    # -------------------------------
+    # PAGE 4 : Dashboard (admin uniquement)
+    # -------------------------------
+    elif selected == "Dashboard":
+        if st.session_state.role != "admin":
+            st.error("⛔ Accès restreint. Réservé aux administrateurs.")
+        else:
+            show_dashboard()
+
+    # -------------------------------
+    # PAGE 5 : Admin (gestion utilisateurs)
+    # -------------------------------
+    elif selected == "Admin":
+        if st.session_state.role != "admin":
+            st.error("⛔ Accès restreint. Réservé aux administrateurs.")
+        else:
+            show_admin_page()
