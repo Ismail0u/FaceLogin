@@ -5,10 +5,10 @@ import streamlit_lottie as st_lottie
 import requests
 
 from auth import login, logout
-from pages.dashboard_page import show_dashboard
-from pages.recognition_page import show_recognition
-from pages.add_user_page import add_user
-from pages.admin_page import show_admin_page
+from views.dashboard_page import show_dashboard
+from views.recognition_page import show_recognition
+from views.add_user_page import add_user
+from views.admin_page import show_admin_page
 
 # -------------------------------
 # Initialisation session

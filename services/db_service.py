@@ -1,51 +1,56 @@
 # services/db_service.py
-import ast  # pour parser la chaîne de dictionnaire
+import ast
 import os
 import csv
 from datetime import datetime
 
+# Chemin vers le fichier CSV de présence
 CSV_PATH = "database/presence_log.csv"
 
-# Initialisation du fichier CSV s’il n'existe pas
+# Initialise le dossier et le fichier CSV avec en-têtes si nécessaire
 def init_csv():
-    if not os.path.exists(os.path.dirname(CSV_PATH)):
-        os.makedirs(os.path.dirname(CSV_PATH))
-
+    directory = os.path.dirname(CSV_PATH)
+    if not os.path.exists(directory):
+        os.makedirs(directory, exist_ok=True)
     if not os.path.exists(CSV_PATH):
-        with open(CSV_PATH, mode='w', newline='') as file:
-            writer = csv.writer(file)
-            writer.writerow(["name", "date", "time"])
+        with open(CSV_PATH, mode='w', newline='', encoding='utf-8') as f:
+            writer = csv.writer(f)
+            writer.writerow(["name", "date", "time"])  # en-têtes
 
 # Enregistre une présence dans le CSV
-def log_presence(name):
+def log_presence(name: str):
+    init_csv()
     now = datetime.now()
     date_str = now.strftime("%Y-%m-%d")
     time_str = now.strftime("%H:%M:%S")
-
-    with open(CSV_PATH, mode='a', newline='') as file:
-        writer = csv.writer(file)
+    with open(CSV_PATH, mode='a', newline='', encoding='utf-8') as f:
+        writer = csv.writer(f)
         writer.writerow([name, date_str, time_str])
 
-# Récupère toutes les présences (en option : filtrer par nom ou date)
+# Récupère et nettoie toutes les présences
 def get_all_presences():
-    if not os.path.exists(CSV_PATH):
-        return []
-
-    cleaned_data = []
-    with open(CSV_PATH, "r") as f:
+    init_csv()
+    presences = []
+    with open(CSV_PATH, mode='r', newline='', encoding='utf-8') as f:
         reader = csv.reader(f)
+        next(reader, None)  # sauter l'en-tête
         for row in reader:
-            try:
-                identity_dict = ast.literal_eval(row[0])
-                name = identity_dict.get("identity", "Inconnu")
-                date = row[1]
-                time = row[2]
-                cleaned_data.append({
-                    "Nom": name,
-                    "Date": date,
-                    "Heure": time,
-                    "DateTime": datetime.strptime(f"{date} {time}", "%Y-%m-%d %H:%M:%S")
-                })
-            except Exception as e:
-                print("Erreur:", e)
-    return cleaned_data
+            if len(row) < 3:
+                continue  # ignore les lignes corrompues
+            raw, date_str, time_str = row[0].strip(), row[1].strip(), row[2].strip()
+            # Essayer de parser une dict-string {'identity': 'Name'}
+            name = raw
+            if raw.startswith("{") and raw.endswith("}"):
+                try:
+                    parsed = ast.literal_eval(raw)
+                    if isinstance(parsed, dict) and "identity" in parsed:
+                        name = parsed["identity"]
+                except (ValueError, SyntaxError):
+                    # si parsing échoue, conserver raw
+                    pass
+            presences.append({
+                "Nom": name,
+                "Date": date_str,
+                "Heure": time_str,
+            })
+    return presences
