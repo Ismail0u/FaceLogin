@@ -1,37 +1,37 @@
 # services/deepface_service.py
-
 import os
 import cv2
 import numpy as np
+import uuid
 from deepface import DeepFace
-from utils.helpers import save_temp_image, extract_name_from_path
+from retinaface import RetinaFace
+from utils.helpers import save_temp_image, extract_name_from_path, clear_temp_images
 
-DATA_DIR = "data/faces/"
+# Configuration
+data_dir = "data/faces/"
 MODEL_NAME = "Facenet512"
 DISTANCE_METRIC = "cosine"
 THRESHOLD = 0.55  # Ajustable selon les tests
+TEMP_DIR = "data/temp/"
 
 
 def analyze_face(image_input):
     """
-    Analyse les émotions du visage.
-    Accepte un fichier image ou un chemin.
+    Analyse les émotions d'un visage unique.
+    Accepte un chemin ou un fichier (file-like).
     """
     try:
-        if isinstance(image_input, str):  # Cas : chemin
+        # Préparer l'image
+        if isinstance(image_input, str):
             img = cv2.imread(image_input)
-        else:  # Cas : fichier image (file-like object)
+        else:
             file_bytes = np.asarray(bytearray(image_input.read()), dtype=np.uint8)
             img = cv2.imdecode(file_bytes, cv2.IMREAD_COLOR)
-
         if img is None:
-            raise ValueError("Image non valide ou introuvable.")
-
-        # Analyse avec DeepFace
+            raise ValueError("Image non valide.")
+        # Analyse emotion
         analysis = DeepFace.analyze(
-            img,
-            actions=['emotion'],
-            enforce_detection=False
+            img, actions=['emotion'], enforce_detection=False
         )
         return analysis[0]
     except Exception as e:
@@ -41,52 +41,46 @@ def analyze_face(image_input):
 
 def verify_face_with_db(image_input):
     """
-    Compare une image (chemin ou fichier) avec la base d’images.
-    Renvoie l’identité si un match fiable est trouvé.
+    Vérifie un visage unique contre la base.
+    Retourne dict {'verified', 'identity', 'distance'}.
     """
     try:
-        # 1. Gérer le cas chemin ou fichier
+        # Gérer chemin ou fichier
         if isinstance(image_input, str):
             temp_path = image_input
         else:
             temp_path = save_temp_image(image_input)
 
-        # 2. Recherche dans la base
-        results = DeepFace.find(
+        # Recherche de similarités
+        df_list = DeepFace.find(
             img_path=temp_path,
-            db_path=DATA_DIR,
+            db_path=data_dir,
             model_name=MODEL_NAME,
             distance_metric=DISTANCE_METRIC,
             enforce_detection=False
         )
-
-        if not results or len(results[0]) == 0:
-            print("❌ Aucun visage similaire trouvé dans la base.")
+        # si aucun résultat
+        if not df_list or df_list[0].empty:
             return {"verified": False}
 
-        # 3. Meilleur match
-        best_match = results[0].iloc[0]
-        best_match_path = best_match["identity"]
-        identity_name = extract_name_from_path(best_match_path)
+        # Sélection du meilleur match
+        best = df_list[0].iloc[0]
+        cand_path = best['identity']
+        cand_name = extract_name_from_path(cand_path)
 
-        # 4. Vérification stricte
-        verification = DeepFace.verify(
+        # Vérification stricte
+        verif = DeepFace.verify(
             img1_path=temp_path,
-            img2_path=best_match_path,
+            img2_path=cand_path,
             model_name=MODEL_NAME,
             distance_metric=DISTANCE_METRIC,
             enforce_detection=False
         )
-
-        distance = verification.get("distance", 1.0)
-        verified = verification.get("verified", False)
-
-        print(f"🔍 Match : {identity_name} | Distance = {distance:.4f} | Verified = {verified}")
-
-        if verified and distance <= THRESHOLD:
-            return {"verified": True, "identity": identity_name, "distance": distance}
-        else:
-            return {"verified": False, "distance": distance}
+        dist = verif.get('distance', 1.0)
+        ok = verif.get('verified', False)
+        if ok and dist <= THRESHOLD:
+            return {"verified": True, "identity": cand_name, "distance": dist}
+        return {"verified": False, "distance": dist}
 
     except Exception as e:
         print("❌ Erreur dans verify_face_with_db:", e)
@@ -95,23 +89,91 @@ def verify_face_with_db(image_input):
 
 def recognize_face(image_path):
     """
-    Trouve un match dans la base à partir d’un chemin d’image.
-    Retourne le nom si trouvé, sinon None.
+    Recherche un visage unique via find, renvoie juste le nom ou None.
     """
     try:
-        results = DeepFace.find(
+        df_list = DeepFace.find(
             img_path=image_path,
-            db_path=DATA_DIR,
+            db_path=data_dir,
             model_name=MODEL_NAME,
             distance_metric=DISTANCE_METRIC,
             enforce_detection=False
         )
-
-        if len(results) > 0 and len(results[0]) > 0:
-            matched_path = results[0].iloc[0]["identity"]
-            return extract_name_from_path(matched_path)
-
+        if df_list and not df_list[0].empty:
+            return extract_name_from_path(df_list[0].iloc[0]['identity'])
         return None
     except Exception as e:
         print("❌ Erreur dans recognize_face:", e)
         return None
+
+
+def verify_group(image_input):
+    """
+    Détecte et reconnaît plusieurs visages dans une image de groupe.
+    Retourne une liste de dicts {face_id, coords, name, score}.
+    """
+    clear_temp_images()
+    try:
+        # obtenir un chemin temporaire
+        if isinstance(image_input, str):
+            temp_path = image_input
+        else:
+            temp_path = save_temp_image(image_input)
+
+        # charger l'image
+        img = cv2.imread(temp_path)
+        if img is None:
+            return []
+
+        # détection multi-visages
+        detections = RetinaFace.detect_faces(temp_path)
+        results = []
+        if not detections:
+            return results
+
+        for face_id, info in detections.items():
+            x1, y1, x2, y2 = info['facial_area']
+            face_crop = img[y1:y2, x1:x2]
+            # sauver chaque crop pour DeepFace.find
+            crop_path = os.path.join(TEMP_DIR, f"crop_{uuid.uuid4().hex}.jpg")
+            cv2.imwrite(crop_path, face_crop)
+
+            # init
+            name, score = "Inconnu", None
+            # recherche best match
+            df_list = DeepFace.find(
+                img_path=crop_path,
+                db_path=data_dir,
+                model_name=MODEL_NAME,
+                distance_metric=DISTANCE_METRIC,
+                enforce_detection=False
+            )
+            if df_list and not df_list[0].empty:
+                best = df_list[0].iloc[0]
+                cand_path = best['identity']
+                cand_name = extract_name_from_path(cand_path)
+                verif = DeepFace.verify(
+                    img1_path=crop_path,
+                    img2_path=cand_path,
+                    model_name=MODEL_NAME,
+                    distance_metric=DISTANCE_METRIC,
+                    enforce_detection=False
+                )
+                dist = verif.get('distance', None)
+                ok = verif.get('verified', False)
+                if ok and dist <= THRESHOLD:
+                    name, score = cand_name, dist
+            results.append({
+                'face_id': face_id,
+                'coords': (x1, y1, x2-x1, y2-y1),
+                'name': name,
+                'score': score
+            })
+        clear_temp_images()
+        return results
+
+    except Exception as e:
+        print("❌ Erreur dans verify_group:", e)
+        clear_temp_images()
+        return []
+
