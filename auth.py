@@ -1,23 +1,17 @@
-# auth.py
 import streamlit as st
-
-# Utilisateurs fictifs pour l'exemple (à remplacer par DB réelle)
-USERS = {
-    "admin@email.com": {"password": "admin123", "role": "admin"},
-    "user@email.com": {"password": "user123", "role": "utilisateur"},
-}
+from services.user_service import get_user_by_email
 
 def login():
     st.title("🔐 Connexion")
     email = st.text_input("Email")
     password = st.text_input("Mot de passe", type="password")
     if st.button("Se connecter"):
-        user = USERS.get(email)
-        if user and user["password"] == password:
+        user = get_user_by_email(email)
+        if user and user.password == password:
             st.success("✅ Connexion réussie.")
             st.session_state.authenticated = True
-            st.session_state.email = email
-            st.session_state.role = user["role"]
+            st.session_state.email = user.email
+            st.session_state.role = user.role
             st.rerun()
         else:
             st.error("❌ Email ou mot de passe incorrect.")

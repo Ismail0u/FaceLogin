@@ -9,4 +9,5 @@ class Utilisateur(Base):
     id = Column(Integer, primary_key=True, index=True)
     nom = Column(String(100), nullable=False)
     email = Column(String(100), unique=True, nullable=False)
+    password = Column(String(100), nullable=False)  # Ajouté pour login
     role = Column(String(50), default="utilisateur")
