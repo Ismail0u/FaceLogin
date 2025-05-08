@@ -11,3 +11,5 @@ DUPLICATE_TIMEOUT = 60
 
 # Répertoire de sauvegarde pour logs ou captures
 LOG_DIR = "data/logs/"
+
+CAMERA_INDEXES = [0, 1]  # Pour plusieurs caméras (ajuste selon ton setup)
