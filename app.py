@@ -9,6 +9,7 @@ from views.dashboard_page import show_dashboard
 from views.recognition_page import show_recognition
 from views.add_user_page import add_user
 from views.admin_page import show_admin_page
+from views.surveillance_page import show_surveillance
 
 # -------------------------------
 # Initialisation session
@@ -46,8 +47,8 @@ else:
         logout()
         selected = option_menu(
             menu_title="FaceLogin",
-            options=["🏠 Accueil", "Reconnaissance", "Ajouter un utilisateur", "Dashboard", "Admin"],
-            icons=["house", "camera", "person-plus", "bar-chart-line", "gear"],
+            options=["🏠 Accueil", "Reconnaissance", "Ajouter un utilisateur", "Dashboard", "Admin","surveille"],
+            icons=["house", "camera", "person-plus", "bar-chart-line", "gear","camera"],
             default_index=0,
         )
 
@@ -94,3 +95,6 @@ else:
             st.error("⛔ Accès restreint. Réservé aux administrateurs.")
         else:
             show_admin_page()
+
+    elif selected =="surveille":
+        show_surveillance()
