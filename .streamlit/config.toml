@@ -1,0 +1,5 @@
+[server]
+pythonPath = "/usr/bin/python3.11"
+
+[runner]
+pythonPath = "/usr/bin/python3.11"

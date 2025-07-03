@@ -1,0 +1,17 @@
+# Core dependencies
+streamlit==1.44.1
+deepface==0.0.93
+tensorflow==2.15.0
+opencv-python==4.10.0.84
+numpy==1.24.3
+pandas==2.0.3
+pillow==10.0.0
+
+# Optional dependencies
+streamlit-lottie==0.0.5
+streamlit-option-menu==0.4.0
+plotly==5.15.0
+requests==2.31.0
+mysql-connector-python==8.1.0
+flask==3.0.0
+flask-cors==4.0.0
