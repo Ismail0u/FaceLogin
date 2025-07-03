@@ -1,12 +1,11 @@
+import os
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-# Pour SQLite (local, simple, sans serveur)
-DATABASE_URL = "sqlite:///database/users.db"
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./database/users.db") # Fallback for local dev
 
-# Pour MySQL (quand ton serveur sera OK)
-# DATABASE_URL = "mysql+mysqlconnector://root:password@localhost/facelogin_db"
+connect_args = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
 
-engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {})
+engine = create_engine(DATABASE_URL, connect_args=connect_args)
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
