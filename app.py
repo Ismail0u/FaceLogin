@@ -1,3 +1,4 @@
+# @@streamlit run --python-version 3.11
 import streamlit as st
 from datetime import datetime
 from streamlit_option_menu import option_menu
