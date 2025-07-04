@@ -12,6 +12,20 @@ from views.add_user_page import add_user
 from views.admin_page import show_admin_page
 from views.surveillance_page import show_surveillance
 
+# --- CODE D'INITIALISATION DE LA BASE DE DONNÉES ---
+# Ces lignes vont s'exécuter à chaque démarrage de l'application
+# C'est nécessaire pour le mode gratuit sans shell ou pre-deploy command.
+
+# Importe le script init_db.py.
+# L'importation de init_db va automatiquement exécuter le code de création des tables
+# (Base.metadata.create_all) qui est au niveau supérieur de ce fichier.
+from database import init_db
+
+# Appelle la fonction create_admin pour s'assurer que l'admin par défaut existe.
+# Cette fonction contient déjà une vérification pour ne pas le créer en double.
+init_db.create_admin()
+
+# --- FIN DU CODE D'INITIALISATION --
 # -------------------------------
 # Initialisation session
 # -------------------------------
